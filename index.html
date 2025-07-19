@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Advanced To-Do Reminder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              100: '#dbeafe',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            danger: {
+              600: '#dc2626',
+              700: '#b91c1c',
+            },
+            success: {
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .priority-high { border-left: 4px solid #dc2626; }
+    .priority-medium { border-left: 4px solid #f59e0b; }
+    .priority-low { border-left: 4px solid #16a34a; }
+    .task-completed { opacity: 0.7; }
+    .task-completed .task-title { text-decoration: line-through; }
+    .animate-pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <div class="bg-white shadow-xl rounded-xl overflow-hidden">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
+        <div class="flex justify-between items-center">
+          <h1 class="text-3xl font-bold">
+            <i class="fas fa-tasks mr-2"></i> Advanced To-Do Reminder
+          </h1>
+          <div class="flex items-center space-x-2">
+            <span id="currentDateTime" class="font-medium"></span>
+            <button id="themeToggle" class="p-2 rounded-full hover:bg-white/20">
+              <i class="fas fa-moon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="p-6">
+        <!-- Task Input Form -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
+              <input type="text" id="taskTitle" placeholder="What needs to be done?" 
+                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select id="taskCategory" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+                <option value="general">General</option>
+                <option value="work">Work</option>
+                <option value="personal">Personal</option>
+                <option value="shopping">Shopping</option>
+                <option value="health">Health</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input type="datetime-local" id="taskDueDate" 
+                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <select id="taskPriority" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Reminder</label>
+              <div class="relative">
+                <input type="datetime-local" id="taskReminder" 
+                  class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+                <button id="addReminderBtn" class="absolute right-3 top-3 text-primary-600 hover:text-primary-700 hidden">
+                  <i class="fas fa-bell"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea id="taskDescription" rows="2" placeholder="Additional details..." 
+              class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"></textarea>
+          </div>
+
+          <button onclick="addTask()" class="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition duration-200">
+            <i class="fas fa-plus mr-2"></i> Add Task
+          </button>
+        </div>
+
+        <!-- Task Filters -->
+        <div class="flex flex-wrap items-center justify-between mb-6 gap-2">
+          <div class="flex space-x-2">
+            <button onclick="filterTasks('all')" class="filter-btn active px-4 py-2 rounded-lg bg-primary-600 text-white">
+              All Tasks
+            </button>
+            <button onclick="filterTasks('active')" class="filter-btn px-4 py-2 rounded-lg border hover:bg-gray-100">
+              Active
+            </button>
+            <button onclick="filterTasks('completed')" class="filter-btn px-4 py-2 rounded-lg border hover:bg-gray-100">
+              Completed
+            </button>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-600">Sort by:</span>
+            <select id="sortTasks" onchange="renderTasks()" class="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600">
+              <option value="dueDate">Due Date</option>
+              <option value="priority">Priority</option>
+              <option value="createdAt">Created At</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Task Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="text-gray-500 text-sm">Total Tasks</div>
+            <div class="text-2xl font-bold" id="totalTasks">0</div>
+          </div>
+          <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="text-gray-500 text-sm">Active</div>
+            <div class="text-2xl font-bold text-primary-600" id="activeTasks">0</div>
+          </div>
+          <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="text-gray-500 text-sm">Completed</div>
+            <div class="text-2xl font-bold text-success-600" id="completedTasks">0</div>
+          </div>
+          <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <div class="text-gray-500 text-sm">Overdue</div>
+            <div class="text-2xl font-bold text-danger-600" id="overdueTasks">0</div>
+          </div>
+        </div>
+
+        <!-- Task List -->
+        <div id="taskList" class="space-y-3"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-12">
+          <div class="text-gray-400 text-5xl mb-4">
+            <i class="fas fa-tasks"></i>
+          </div>
+          <h3 class="text-lg font-medium text-gray-500">No tasks found</h3>
+          <p class="text-gray-400 mt-1">Add a task to get started</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Sound -->
+  <audio id="notificationSound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
+
+  <script>
+    // DOM Elements
+    const taskList = document.getElementById("taskList");
+    const emptyState = document.getElementById("emptyState");
+    const currentDateTime = document.getElementById("currentDateTime");
+    const themeToggle = document.getElementById("themeToggle");
+    const addReminderBtn = document.getElementById("addReminderBtn");
+    const taskReminder = document.getElementById("taskReminder");
+    const notificationSound = document.getElementById("notificationSound");
+    
+    // Initialize tasks from localStorage
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let currentFilter = 'all';
+    let darkMode = false;
+    let reminderTimeouts = {};
+
+    // Initialize the app
+    function init() {
+      updateDateTime();
+      setInterval(updateDateTime, 1000);
+      
+      // Check notification permission
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
+      
+      // Set up event listeners
+      taskReminder.addEventListener('change', function() {
+        addReminderBtn.style.display = this.value ? 'block' : 'none';
+      });
+      
+      addReminderBtn.addEventListener('click', function() {
+        alert(`Reminder set for: ${new Date(taskReminder.value).toLocaleString()}`);
+      });
+      
+      themeToggle.addEventListener('click', toggleDarkMode);
+      
+      // Load and render tasks
+      loadTasks();
+      renderTasks();
+      updateTaskStats();
+      
+      // Schedule existing reminders
+      tasks.forEach(task => {
+        if (!task.completed && task.reminders && task.reminders.length > 0) {
+          scheduleReminders(task);
+        }
+      });
+    }
+
+    // Update current date and time display
+    function updateDateTime() {
+      const now = new Date();
+      currentDateTime.textContent = now.toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      // Check for overdue tasks every minute
+      if (now.getSeconds() === 0) {
+        checkOverdueTasks();
+      }
+    }
+
+    // Toggle dark mode
+    function toggleDarkMode() {
+      darkMode = !darkMode;
+      document.documentElement.classList.toggle('dark', darkMode);
+      themeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+      localStorage.setItem('darkMode', darkMode);
+    }
+
+    // Load dark mode preference
+    if (localStorage.getItem('darkMode') === 'true') {
+      toggleDarkMode();
+    }
+
+    // Add a new task
+    function addTask() {
+      const title = document.getElementById("taskTitle").value.trim();
+      const dueDate = document.getElementById("taskDueDate").value;
+      const priority = document.getElementById("taskPriority").value;
+      const category = document.getElementById("taskCategory").value;
+      const description = document.getElementById("taskDescription").value;
+      const reminder = document.getElementById("taskReminder").value;
+
+      if (!title) {
+        alert("Please enter a task title.");
+        return;
+      }
+
+      const task = {
+        id: Date.now(),
+        title,
+        description,
+        category,
+        priority,
+        dueDate,
+        reminders: reminder ? [reminder] : [],
+        createdAt: new Date().toISOString(),
+        completed: false
+      };
+
+      tasks.push(task);
+      saveTasks();
+      renderTasks();
+      updateTaskStats();
+      
+      if (reminder) {
+        scheduleReminders(task);
+      }
+
+      // Clear form
+      document.getElementById("taskTitle").value = "";
+      document.getElementById("taskDueDate").value = "";
+      document.getElementById("taskReminder").value = "";
+      document.getElementById("taskDescription").value = "";
+      addReminderBtn.style.display = 'none';
+    }
+
+    // Render tasks based on current filter and sort
+    function renderTasks() {
+      taskList.innerHTML = "";
+      
+      let filteredTasks = [...tasks];
+      const sortBy = document.getElementById("sortTasks").value;
+      
+      // Apply filter
+      if (currentFilter === 'active') {
+        filteredTasks = filteredTasks.filter(task => !task.completed);
+      } else if (currentFilter === 'completed') {
+        filteredTasks = filteredTasks.filter(task => task.completed);
+      }
+      
+      // Apply sorting
+      filteredTasks.sort((a, b) => {
+        if (sortBy === 'priority') {
+          const priorityOrder = { high: 1, medium: 2, low: 3 };
+          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        } else if (sortBy === 'createdAt') {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        } else {
+          // Default sort by due date
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+      });
+      
+      if (filteredTasks.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      
+      filteredTasks.forEach(task => {
+        const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
+        const taskElement = document.createElement("div");
+        
+        taskElement.className = `task-item bg-white border rounded-lg p-4 shadow-sm ${task.priority ? 'priority-' + task.priority : ''} ${task.completed ? 'task-completed' : ''} ${isOverdue ? 'border-l-4 border-danger-600 animate-pulse' : ''}`;
+        
+        taskElement.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="flex items-start space-x-3 w-full">
+              <button onclick="toggleTaskCompletion(${task.id})" class="mt-1 flex-shrink-0">
+                <i class="fas fa-${task.completed ? 'check-circle text-success-600' : 'circle text-gray-300'} fa-lg"></i>
+              </button>
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start">
+                  <h3 class="task-title text-lg font-medium mb-1 truncate">${task.title}</h3>
+                  <span class="text-xs px-2 py-1 rounded-full ${getPriorityBadgeClass(task.priority)}">
+                    ${task.priority}
+                  </span>
+                </div>
+                ${task.description ? `<p class="text-gray-600 mb-2">${task.description}</p>` : ''}
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                  ${task.category ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100">
+                    <i class="fas fa-${getCategoryIcon(task.category)} mr-1"></i> ${task.category}
+                  </span>` : ''}
+                  ${task.dueDate ? `<span class="inline-flex items-center">
+                    <i class="far fa-calendar-alt mr-1"></i> ${new Date(task.dueDate).toLocaleString()}
+                  </span>` : ''}
+                  ${task.reminders && task.reminders.length > 0 ? `<span class="inline-flex items-center">
+                    <i class="far fa-bell mr-1"></i> ${task.reminders.length} reminder${task.reminders.length > 1 ? 's' : ''}
+                  </span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="flex space-x-2 ml-2">
+              <button onclick="editTask(${task.id})" class="text-gray-500 hover:text-primary-600 p-1">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deleteTask(${task.id})" class="text-gray-500 hover:text-danger-600 p-1">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        
+        taskList.appendChild(taskElement);
+      });
+    }
+
+    // Filter tasks
+    function filterTasks(filter) {
+      currentFilter = filter;
+      
+      // Update active state of filter buttons
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-primary-600', 'text-white');
+        btn.classList.add('border', 'hover:bg-gray-100');
+      });
+      
+      event.target.classList.add('active', 'bg-primary-600', 'text-white');
+      event.target.classList.remove('border', 'hover:bg-gray-100');
+      
+      renderTasks();
+    }
+
+    // Toggle task completion status
+    function toggleTaskCompletion(id) {
+      tasks = tasks.map(task => 
+        task.id === id ? { ...task, completed: !task.completed } : task
+      );
+      saveTasks();
+      renderTasks();
+      updateTaskStats();
+      
+      // Cancel reminders if task is completed
+      if (tasks.find(t => t.id === id).completed) {
+        cancelReminders(id);
+      }
+    }
+
+    // Edit task
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      // In a real app, you'd show a modal or form to edit the task
+      // For simplicity, we'll just update the title with a prompt
+      const newTitle = prompt("Edit task title:", task.title);
+      if (newTitle && newTitle.trim() !== "") {
+        task.title = newTitle.trim();
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    // Delete task
+    function deleteTask(id) {
+      if (confirm("Are you sure you want to delete this task?")) {
+        tasks = tasks.filter(task => task.id !== id);
+        saveTasks();
+        renderTasks();
+        updateTaskStats();
+        cancelReminders(id);
+      }
+    }
+
+    // Schedule reminders for a task
+    function scheduleReminders(task) {
+      if (!task.reminders || task.reminders.length === 0) return;
+      
+      cancelReminders(task.id);
+      
+      task.reminders.forEach((reminder, index) => {
+        const delay = new Date(reminder).getTime() - Date.now();
+        
+        if (delay > 0) {
+          const timeoutId = setTimeout(() => {
+            showNotification(task);
+          }, delay);
+          
+          reminderTimeouts[`${task.id}_${index}`] = timeoutId;
+        }
+      });
+    }
+
+    // Cancel all reminders for a task
+    function cancelReminders(taskId) {
+      Object.keys(reminderTimeouts).forEach(key => {
+        if (key.startsWith(taskId + '_')) {
+          clearTimeout(reminderTimeouts[key]);
+          delete reminderTimeouts[key];
+        }
+      });
+    }
+
+    // Show notification for a task
+    function showNotification(task) {
+      // Play sound
+      notificationSound.play().catch(e => console.log("Audio playback failed:", e));
+      
+      // Show browser notification
+      if (Notification.permission === "granted") {
+        new Notification(`⏰ Reminder: ${task.title}`, {
+          body: task.description || "No additional details",
+          icon: "https://cdn-icons-png.flaticon.com/512/3064/3064197.png"
+        });
+      } else {
+        alert(`Reminder: ${task.title}\n\n${task.description || ""}`);
+      }
+      
+      // Highlight the task in the UI
+      const taskElement = document.querySelector(`.task-item[data-id="${task.id}"]`);
+      if (taskElement) {
+        taskElement.classList.add('animate-pulse');
+        setTimeout(() => {
+          taskElement.classList.remove('animate-pulse');
+        }, 3000);
+      }
+    }
+
+    // Check for overdue tasks
+    function checkOverdueTasks() {
+      const now = new Date();
+      tasks.forEach(task => {
+        if (!task.completed && task.dueDate && new Date(task.dueDate) < now) {
+          // Update UI on next render
+          renderTasks();
+          updateTaskStats();
+        }
+      });
+    }
+
+    // Update task statistics
+    function updateTaskStats() {
+      const total = tasks.length;
+      const active = tasks.filter(t => !t.completed).length;
+      const completed = tasks.filter(t => t.completed).length;
+      const overdue = tasks.filter(t => 
+        !t.completed && t.dueDate && new Date(t.dueDate) < new Date()
+      ).length;
+      
+      document.getElementById("totalTasks").textContent = total;
+      document.getElementById("activeTasks").textContent = active;
+      document.getElementById("completedTasks").textContent = completed;
+      document.getElementById("overdueTasks").textContent = overdue;
+    }
+
+    // Save tasks to localStorage
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    // Load tasks from localStorage
+    function loadTasks() {
+      const savedTasks = localStorage.getItem("tasks");
+      if (savedTasks) {
+        tasks = JSON.parse(savedTasks);
+      }
+    }
+
+    // Helper function to get priority badge class
+    function getPriorityBadgeClass(priority) {
+      switch (priority) {
+        case 'high': return 'bg-danger-100 text-danger-800';
+        case 'medium': return 'bg-yellow-100 text-yellow-800';
+        case 'low': return 'bg-success-100 text-success-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    }
+
+    // Helper function to get category icon
+    function getCategoryIcon(category) {
+      switch (category) {
+        case 'work': return 'briefcase';
+        case 'personal': return 'user';
+        case 'shopping': return 'shopping-cart';
+        case 'health': return 'heartbeat';
+        default: return 'folder';
+      }
+    }
+
+    // Initialize the app when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
